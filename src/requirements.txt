@@ -1,0 +1,23 @@
+# Sentra Email Scanner Development Dependencies
+# Include all dependencies for local development and testing
+
+# Production dependencies (also install requirements-prod.txt for Lambda)
+-r requirements-prod.txt
+
+# AWS SDK (provided by Lambda runtime, but needed for local development)
+boto3>=1.34.0
+botocore>=1.34.0
+
+# Testing dependencies (for local development only)
+pytest>=7.4.0
+pytest-cov>=4.1.0
+moto>=4.2.0  # AWS service mocking for tests
+
+# Development dependencies (not included in Lambda package)
+black>=23.0.0  # Code formatting
+flake8>=6.0.0  # Linting
+mypy>=1.5.0    # Type checking
+
+# Security scanning (development only)
+bandit>=1.7.5  # Security linting
+safety>=2.3.0  # Dependency vulnerability scanning

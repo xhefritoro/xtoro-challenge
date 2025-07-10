@@ -1,0 +1,50 @@
+# Sentra Scanner Configuration Template
+# Copy this file to terraform.tfvars and customize for your environment
+
+# ==============================================================================
+# REQUIRED CONFIGURATION (Must be provided by Sentra)
+# ==============================================================================
+
+# Your Sentra-provided customer identifier
+customer_name = "your-company-name"
+
+# S3 bucket to monitor for email scanning
+s3_bucket_name = "your-s3-bucket-name"
+
+# Sentra SaaS account ID (provided during onboarding)
+sentra_account_id = "123456789012"
+
+# Sentra SQS queue ARN for receiving scan results (provided during onboarding)
+sentra_sqs_queue_arn = "arn:aws:sqs:us-east-1:123456789012:sentra-customer-results"
+
+# ==============================================================================
+# OPTIONAL CONFIGURATION (Customize for your environment)
+# ==============================================================================
+
+# Environment identifier (dev, staging, prod)
+environment = "prod"
+
+# File types to scan (security consideration)
+allowed_file_extensions = [".txt", ".csv", ".json", ".log", ".md", ".yml", ".yaml"]
+
+# Maximum file size to process (cost optimization)
+max_file_size_mb = 100
+
+# Lambda configuration (performance tuning)
+lambda_timeout = 300  # 5 minutes
+lambda_memory = 512   # MB
+
+# Security settings
+enable_encryption = true
+
+# Monitoring configuration
+retention_days = 30  # CloudWatch log retention
+
+# Resource tagging
+tags = {
+  Project     = "SentraEmailScanner"
+  Owner       = "SecurityTeam"
+  Environment = "production"
+  CostCenter  = "Security"
+  Compliance  = "SOC2"
+}

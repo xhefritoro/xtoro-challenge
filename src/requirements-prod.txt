@@ -1,0 +1,8 @@
+# Sentra Email Scanner Production Dependencies
+# Only include dependencies needed for Lambda runtime
+
+# Text processing and encoding detection
+chardet>=5.2.0
+
+# Note: boto3 and botocore are provided by AWS Lambda runtime
+# Only include if you need a specific version newer than runtime provides
