@@ -7,7 +7,7 @@
 
 This project demonstrates enterprise-grade Solutions Architecture thinking with a focus on **security**, **scalability**, and **operational excellence**. The Sentra Email Scanner is designed as a secure, event-driven system that scans S3 objects for email addresses while maintaining strict privacy and security standards.
 
-## 🏗️ Architecture Decisions & Justifications
+## Architecture Decisions & Justifications
 
 ### 1. **Compute Infrastructure Choice: AWS Lambda** ✅
 
@@ -68,69 +68,12 @@ resource "aws_iam_policy" "lambda_s3_policy" {
 - **Compression**: Message compression for efficiency
 - **Audit logging**: Complete CloudWatch audit trail
 
-## 📊 System Architecture Diagram
+## System Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Customer AWS Account                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐    S3 Event    ┌─────────────────────────────┐ │
-│  │   S3 Bucket │ ─────────────→ │       Lambda Function       │ │
-│  │             │                │   (Sentra Email Scanner)    │ │
-│  └─────────────┘                │                             │ │
-│                                 │ ┌─────────────────────────┐ │ │
-│                                 │ │   Email Extractor       │ │ │
-│                                 │ │   • Regex patterns      │ │ │
-│                                 │ │   • Encoding detection  │ │ │
-│                                 │ │   • Binary file skip    │ │ │
-│                                 │ └─────────────────────────┘ │ │
-│                                 │                             │ │
-│                                 │ ┌─────────────────────────┐ │ │
-│                                 │ │   Report Sender         │ │ │
-│                                 │ │   • Message compression │ │ │
-│                                 │ │   • Retry logic         │ │ │
-│                                 │ │   • Privacy protection  │ │ │
-│                                 │ └─────────────────────────┘ │ │
-│                                 └─────────────────────────────┘ │
-│                                               │                 │
-│                                               │ SQS Message     │
-│                                               ▼                 │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │              CloudWatch Monitoring                          │ │
-│  │  • Processing metrics    • Error tracking                  │ │
-│  │  • Duration monitoring   • Cost analysis                   │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                │ Cross-Account
-                                │ SQS Access
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         Sentra SaaS Platform                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │                    SQS Queue                                │ │
-│  │              (Sentra Account)                               │ │
-│  │                                                             │ │
-│  │  • Receives compressed scan results                         │ │
-│  │  • Email hashes only (privacy protection)                  │ │
-│  │  • Customer metadata for routing                           │ │
-│  │  • Processing metrics for billing                          │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                │                                │
-│                                ▼                                │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │            Sentra Processing Pipeline                       │ │
-│  │                                                             │ │
-│  │  • Results aggregation  • Risk analysis                    │ │
-│  │  • Customer dashboards  • Compliance reporting             │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-```
+<img alt="Overall Architecure" src="docs/assets/sentra-scanner.drawio.png" width="50000px">
 
-## 🔍 File Classification Algorithm
+
+## File Classification Algorithm
 
 The scanner implements intelligent file processing with multiple security and cost considerations:
 
@@ -151,31 +94,20 @@ def classify_file(file_key, file_size):
 3. **Efficiency Layer**: Binary detection avoids processing non-text files
 4. **Monitoring Layer**: Cost estimation for operational visibility
 
-## 🚀 Quick Start Deployment
+## Quick Start Deployment
 
 ### Prerequisites
-- AWS CLI configured
-- Terraform >= 1.0
-- Python 3.11+
+- Access to AWS CloudShell
+- Access to  GitHub Repository
 
-### 1. Configure Variables
+### 1. Retrieve Project
 ```bash
-# Copy and customize terraform variables
-cp terraform/variables.tf terraform/terraform.tfvars
-
-# Edit with your values:
-customer_name = "your-company"
-s3_bucket_name = "your-bucket-to-scan"
-sentra_account_id = "123456789012"  # Provided by Sentra
-sentra_sqs_queue_arn = "arn:aws:sqs:..."  # Provided by Sentra
+git clone https://github.com/xhefritoro/xtoro-challenge.git
 ```
 
 ### 2. Deploy Infrastructure
 ```bash
-cd terraform
-terraform init
-terraform plan
-terraform apply
+bash scripts/deploy.sh deploy -e <environment_name> -c <customer_name> -b <your_bucket_to_scan> -q <queue_arn> -a <sentra_account_id>  
 ```
 
 ### 3. Test Installation
@@ -188,7 +120,25 @@ aws s3 cp test-email.txt s3://your-bucket-to-scan/
 aws logs tail /aws/lambda/your-company-sentra-scanner --follow
 ```
 
-## 📈 Operational Excellence
+
+### 4. Destroy Installation
+```bash
+bash scripts/deploy.sh destory -e <environment_name> -c <customer_name> -b <your_bucket_to_scan> -q <queue_arn> -a <sentra_account_id>  
+```
+
+
+### 5. Validate Requirements (Optional)
+```bash
+bash scripts/deploy.sh validate -e <environment_name> -c <customer_name> -b <your_bucket_to_scan> -q <queue_arn> -a <sentra_account_id>  
+```
+
+
+### 5. Rerun Scans (Optional)
+```bash
+bash scripts/deploy.sh estimate -e <environment_name> -c <customer_name> -b <your_bucket_to_scan> -q <queue_arn> -a <sentra_account_id>  
+```
+
+## Operational Excellence
 
 ### Monitoring & Alerting
 - **Custom CloudWatch Metrics**: Processing time, emails found, error rates
@@ -214,7 +164,7 @@ def process_s3_object(bucket, key):
 - **Dead letter queues** for failed processing
 - **Graceful degradation** for temporary AWS service issues
 
-## 🔒 Security Features
+## Security Features
 
 ### Data Protection
 - **Encryption at rest**: S3 bucket encryption enabled
@@ -231,7 +181,7 @@ def process_s3_object(bucket, key):
 - **SOC 2 alignment**: Audit logging and access controls
 - **HIPAA considerations**: Email hashing for healthcare environments
 
-## 📊 Cost Optimization
+## Cost Optimization
 
 ### Lambda Optimization
 - **Right-sized memory**: 512MB default (configurable)
@@ -244,7 +194,7 @@ The scanner is designed to work efficiently with S3 Intelligent Tiering:
 - **Restoration triggers**: Can trigger restore for archived objects
 - **Cost monitoring**: Tracks restoration costs
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 ```bash
 # Run unit tests
@@ -274,7 +224,7 @@ print(f'Should process: {result[\"should_process\"]}')
 ```
 
 
-## 🔄 Scaling Considerations
+## Scaling Considerations
 
 ### Current Capacity
 - **Concurrent executions**: 1000 (Lambda default)
@@ -319,37 +269,6 @@ print(f'Should process: {result[\"should_process\"]}')
 - **Metadata only**: File paths and processing metrics
 - **Compressed transmission**: Gzip compression for efficiency
 
-## 🎯 Solutions Architecture Highlights
-
-This project demonstrates key SA competencies that evaluators look for:
-
-#### 1. **Systems Thinking** 🎯
-- End-to-end design from S3 events to SaaS integration
-- Consideration of upstream/downstream impacts
-- Multi-account security architecture
-- Event-driven processing patterns
-
-#### 2. **Security Mindset** 🔐
-- Least privilege IAM design
-- Privacy-first data handling (email hashing)
-- Cross-account access patterns
-- Comprehensive audit logging
-
-#### 3. **Trade-off Analysis** ⚖️
-- **Lambda vs ECS**: Documented decision with cost/performance analysis
-- **SQS vs API Gateway**: Reliability vs latency trade-offs
-- **Push vs Pull**: Architecture pattern selection rationale
-- **Memory vs Cost**: Performance optimization strategies
-
-#### 4. **Operational Excellence** 🛠️
-- Comprehensive monitoring and alerting
-- Automated deployment with validation
-- Disaster recovery procedures
-- Cost optimization strategies
-
-#### 5. **Customer Empathy** 🤝
-- Easy deployment with minimal customer configuration
-- Clear documentation and troubleshooting guides
-- Minimal required AWS permissions
-- Transparent cost modeling
-
+# Resources
+[Architecture Decisions] [docs/architecture-decisions.md]
+[Operations Runbook] [docs/operations-runbook.md]
