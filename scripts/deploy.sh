@@ -612,63 +612,95 @@ trigger_bulk_scan() {
         
         # Get list of all objects
         local object_list
-        object_list=$(aws s3api list-objects-v2 --bucket "$S3_BUCKET" --query 'Contents[].Key' --output text)
-        
+        object_list=$(aws s3api list-objects-v2 --bucket "$S3_BUCKET" --query 'Contents[?!(ends_with(Key, `/`))].Key' --output text)
+        aws_region=$(aws configure get region 2>/dev/null || echo "${AWS_REGION:-us-east-1}")
+
         local processed=0
         for object_key in $object_list; do
+            # Skip empty object keys
+            if [[ -z "$object_key" || "$object_key" == "None" ]]; then
+                continue
+            fi
+            
             # Create S3 event payload file
-            local payload_file="/tmp/lambda-payload-$$.json"
+            local payload_file="/tmp/lambda-payload-$$-${processed}.json"
             cat > "$payload_file" << EOF
 {
-    "Records": [{
-        "eventVersion": "2.1",
-        "eventSource": "aws:s3",
-        "awsRegion": "$(aws configure get region)",
-        "eventTime": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
-        "eventName": "s3:ObjectCreated:Put",
-        "s3": {
-            "bucket": {
-                "name": "$S3_BUCKET"
-            },
-            "object": {
-                "key": "$object_key"
-            }
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "$aws_region",
+      "eventTime": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
+      "eventName": "s3:ObjectCreated:Put",
+      "s3": {
+        "bucket": {
+          "name": "$S3_BUCKET"
+        },
+        "object": {
+          "key": "$(echo "$object_key" | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip(), safe=''))")",
+          "size": 1024,
+          "eTag": "dummy-etag",
+          "sequencer": "dummy-sequencer"
         }
-    }]
+      }
+    }
+  ]
 }
 EOF
             
-            # Invoke Lambda function
-            aws lambda invoke \
+            # Validate JSON payload was created successfully
+            if [[ ! -f "$payload_file" ]] || ! python3 -m json.tool "$payload_file" > /dev/null 2>&1; then
+                log_error "Failed to create valid JSON payload for object: $object_key"
+                rm -f "$payload_file"
+                continue
+            fi
+            
+            # Invoke Lambda function asynchronously using file reference
+            local invoke_result
+            local response_file="/tmp/lambda-response-$$-${processed}.json"
+            
+            if invoke_result=$(aws lambda invoke \
                 --function-name "$lambda_function_name" \
                 --payload "file://$payload_file" \
-                /tmp/lambda-response.json >/dev/null 2>&1 &
-            
-            # Clean up payload file after a short delay
-            (sleep 5 && rm -f "$payload_file") &
+                "$response_file" 2>&1); then
+                
+                # Success - clean up immediately
+                rm -f "$payload_file" "$response_file"
+                log_info "Successfully processed: $object_key"
+            else
+                log_error "Failed to invoke Lambda for object: $object_key"
+                log_error "Error: $invoke_result"
+                rm -f "$payload_file" "$response_file"
+                
+                # Continue with next file instead of failing completely
+                continue
+            fi
             
             processed=$((processed + 1))
             
-            # Rate limiting - process in batches to avoid throttling
-            if [[ $((processed % 10)) -eq 0 ]]; then
-                wait # Wait for current batch to complete
+            # Rate limiting - process in smaller batches to avoid throttling
+            if [[ $((processed % 5)) -eq 0 ]]; then
                 log_info "Processed $processed/$total_objects files..."
+                sleep 1  # Small delay to avoid hitting Lambda concurrency limits
             fi
         done
+        
+        # Clean up any remaining files
+        rm -f /tmp/lambda-payload-$$-*.json /tmp/lambda-response-$$-*.json
+        
+        log_success "Bulk scan completed. Processed $processed files."
         
         wait # Wait for all remaining invocations
         rm -f /tmp/lambda-response.json
         
-        log_success "Bulk scan completed. Processed $processed files."
     fi
     
     log_info "Check CloudWatch logs for processing details:"
     local aws_region=$(aws configure get region)
     if [[ -z "$aws_region" ]]; then
-        aws_region="$AWS_DEFAULT_REGION"
+        aws_region="$AWS_REGION"
     fi
-    local aws_account_id=$(aws sts get-caller-identity --query Account --output text)
-    log_info "aws logs start-live-tail --log-group-identifiers arn:aws:logs:$aws_region:$aws_account_id:log-group:/aws/lambda/$lambda_function_name"
 }
 
 # Main execution
