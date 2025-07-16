@@ -100,9 +100,9 @@ def classify_file(file_key, file_size):
 - Access to AWS CloudShell
 - Access to  GitHub Repository
 
-### 1. Retrieve Project
+### 1. Go to Project directory
 ```bash
-git clone https://github.com/xhefritoro/xtoro-challenge.git
+cd xtoro-challenge
 ```
 
 ### 2. Deploy Infrastructure
