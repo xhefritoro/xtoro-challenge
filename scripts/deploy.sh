@@ -131,6 +131,7 @@ if [[ "$VERBOSE" == "true" ]]; then
     set -x
 fi
 
+
 # Install Terraform if not found
 install_terraform() {
     log_info "Installing Terraform..."
@@ -662,6 +663,7 @@ EOF
             
             if invoke_result=$(aws lambda invoke \
                 --function-name "$lambda_function_name" \
+                --cli-binary-format raw-in-base64-out \
                 --payload "file://$payload_file" \
                 "$response_file" 2>&1); then
                 

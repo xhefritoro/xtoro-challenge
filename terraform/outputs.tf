@@ -16,11 +16,6 @@ output "lambda_execution_role_arn" {
   value       = aws_iam_role.lambda_execution_role.arn
 }
 
-output "sentra_cross_account_role_arn" {
-  description = "ARN of the cross-account role for Sentra"
-  value       = aws_iam_role.sentra_cross_account_role.arn
-}
-
 output "cloudwatch_log_group" {
   description = "CloudWatch log group for Lambda logs"
   value       = aws_cloudwatch_log_group.lambda_logs.name
@@ -32,7 +27,6 @@ output "deployment_info" {
     customer_name               = var.customer_name
     environment                = var.environment
     lambda_function_arn        = aws_lambda_function.sentra_scanner.arn
-    cross_account_role_arn     = aws_iam_role.sentra_cross_account_role.arn
     external_id               = "${var.customer_name}-external-id"
     s3_bucket_name            = var.s3_bucket_name
     allowed_file_extensions   = var.allowed_file_extensions
@@ -50,7 +44,6 @@ output "security_configuration" {
   value = {
     encryption_enabled        = var.enable_encryption
     least_privilege_iam      = "Enabled - Custom policies with minimal permissions"
-    cross_account_security   = "External ID required for role assumption"
     data_privacy            = "Email hashes only, no plaintext storage"
     audit_logging           = "CloudWatch logs with ${var.retention_days} day retention"
   }
